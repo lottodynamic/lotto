@@ -340,7 +340,7 @@
                 const messageText = `Token-Lotto Admin Login Confirmation: ${Date.now()}`;
                 const signResult = await signMessageUniversal(provider, messageText);
 
-                const res = await fetch('http://127.0.0.1:8000/admin/verify-signature', {
+                const res = await fetch('/admin/verify-signature', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -388,7 +388,7 @@
 
         async function fetchRules() {
             try {
-                const res = await fetch('http://127.0.0.1:8000/current-rules');
+                const res = await fetch('/current-rules');
                 const data = await res.json();
                 currentRules = { ...currentRules, ...data };
                 
@@ -674,7 +674,7 @@
 
                 msgDiv.innerText = "⏳ Sending ticket to server and verifying token balance...";
 
-                const response = await fetch('http://127.0.0.1:8000/submit-ticket', {
+                const response = await fetch('/submit-ticket', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -716,7 +716,7 @@
             };
 
             try {
-                const res = await fetch(`http://127.0.0.1:8000/admin/update-settings/${drawId}`, {
+                const res = await fetch(`/admin/update-settings/${drawId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json', 'x-admin-token': adminAuthToken },
                     body: JSON.stringify(payload)
@@ -741,7 +741,7 @@
             msg.classList.add('hidden');
             const drawId = currentRules.draw_id || 1;
             try {
-                const res = await fetch(`http://127.0.0.1:8000/admin/run-draw/${drawId}`, {
+                const res = await fetch(`/admin/run-draw/${drawId}`, {
                     method: 'POST',
                     headers: { 'x-admin-token': adminAuthToken }
                 });
