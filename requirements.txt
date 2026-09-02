@@ -6,3 +6,4 @@ base58
 solana
 solders
 python-dotenv
+PyNaCl
