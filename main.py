@@ -49,7 +49,7 @@ draw_state = {
     "draw_id": 1,
     "status": "ready",
     "pool_amount": "Reward: 10% SOL Pool",
-    "required_balance": 100000,
+    "required_balance": 55000,
     "reward_percentage": 10.0,
     "max_number": 50,
     "pick_count": 6,
@@ -72,7 +72,7 @@ class SettingsUpdate(BaseModel):
     pick_count: int
     match_threshold: int
     max_winners: int
-    required_balance: int = 100000
+    required_balance: int = 55000
     reward_percentage: float = 10.0
     hours: int = 0
     minutes: int = 2
@@ -89,47 +89,68 @@ class VerifyModel(BaseModel):
     message: str
 
 def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool, str]:
-    try:
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "getTokenAccountsByOwner",
-            "params": [
-                wallet_str,
-                {"mint": TOKEN_MINT_ADDRESS},
-                {"encoding": "jsonParsed"}
-            ]
-        }
-        headers = {"Content-Type": "application/json"}
-        response = requests.post(SOLANA_RPC_URL, json=payload, headers=headers, timeout=10)
-        data = response.json()
-        
-        if "result" not in data or "value" not in data["result"]:
-            return False, 'you do not have any "tokens" in your wallet'
-        
-        accounts = data["result"]["value"]
-        total_balance = 0.0
-        
-        for acc in accounts:
-            try:
-                parsed_info = acc["account"]["data"]["parsed"]["info"]
-                token_amount = parsed_info["tokenAmount"]
-                ui_amount = float(token_amount.get("uiAmount", 0.0) or 0.0)
-                total_balance += ui_amount
-            except Exception:
-                pass
-        
-        if total_balance <= 0:
-            return False, 'you do not have any "tokens" in your wallet'
-        
-        if total_balance < required_amt:
-            formatted_req = f"{required_amt:,}".replace(",", ".")
-            return False, f"you must have {formatted_req} tokens in your wallet."
-            
+    if required_amt <= 0:
         return True, ""
-    except Exception as e:
-        print("Token balance check RPC error:", e)
+
+    programs = [
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # Standard SPL Token Program
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"    # Token-2022 Program
+    ]
+
+    total_balance = 0.0
+    success_fetch = False
+
+    for prog_id in programs:
+        try:
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getTokenAccountsByOwner",
+                "params": [
+                    wallet_str,
+                    {"programId": prog_id},
+                    {"encoding": "jsonParsed"}
+                ]
+            }
+            headers = {"Content-Type": "application/json"}
+            response = requests.post(SOLANA_RPC_URL, json=payload, headers=headers, timeout=10)
+            data = response.json()
+
+            if "result" in data and "value" in data["result"]:
+                success_fetch = True
+                accounts = data["result"]["value"]
+                for acc in accounts:
+                    try:
+                        parsed_info = acc["account"]["data"]["parsed"]["info"]
+                        mint = parsed_info.get("mint")
+                        if mint == TOKEN_MINT_ADDRESS:
+                            token_amount = parsed_info["tokenAmount"]
+                            amount_str = token_amount.get("amount", "0")
+                            decimals = int(token_amount.get("decimals", 0))
+                            calculated_ui_amount = float(amount_str) / (10 ** decimals) if decimals > 0 else float(amount_str)
+                            total_balance += calculated_ui_amount
+                    except Exception as ex:
+                        print("Error parsing token account item:", ex)
+        except Exception as e:
+            print(f"Token balance check RPC exception for program {prog_id}:", e)
+
+    print(f"\n--- TOKEN BALANCE CHECK ---")
+    print(f"Wallet: {wallet_str}")
+    print(f"Target Mint: {TOKEN_MINT_ADDRESS}")
+    print(f"Total Balance Found: {total_balance} | Required: {required_amt}")
+    print(f"---------------------------")
+
+    if not success_fetch and total_balance <= 0:
         return False, 'you do not have any "tokens" in your wallet'
+
+    if total_balance <= 0:
+        return False, 'you do not have any "tokens" in your wallet'
+    
+    if total_balance < required_amt:
+        formatted_req = f"{required_amt:,}".replace(",", ".")
+        return False, f"you must have {formatted_req} tokens in your wallet."
+        
+    return True, ""
 
 def execute_real_solana_sol_transfers_to_winners(winners: List[str], reward_percentage: float):
     if not SOLANA_LIB_AVAILABLE:
@@ -207,13 +228,12 @@ def run_automatic_draw():
     winners = []
     matched_threshold_count = 0
     
-    print(f"--- DRAW #{draw_state['draw_id']} STARTED ---")
+    print(f"\n--- DRAW #{draw_state['draw_id']} STARTED ---")
     print(f"Winning Numbers: {winning_numbers}")
-    print(f"Match Threshold Required: {threshold}")
+    print(f"Match Threshold Required: >= {threshold}")
 
     for p in draw_state["participants"]:
         user_nums = p.get("numbers", [])
-        # Tip güvenliği için integer dönüşümü (String/Integer uyuşmazlığı hatasını tamamen önler)
         user_nums_int = [int(n) for n in user_nums]
         winning_nums_int = [int(n) for n in winning_numbers]
         
@@ -223,11 +243,11 @@ def run_automatic_draw():
         if matches >= threshold:
             matched_threshold_count += 1
             has_token, err_msg = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
-            print(f"-> Token Balance Check: {has_token} ({err_msg})")
             if has_token:
                 winners.append(p["wallet"])
+                print(f"-> WINNER ADDED: {p['wallet']}")
             else:
-                print(f"-> DISQUALIFIED: Wallet matched the numbers but failed token requirement!")
+                print(f"-> DISQUALIFIED: Matched numbers but failed token requirement! ({err_msg})")
 
     tx_url = None
     payout_status = "no_winner"
@@ -260,7 +280,7 @@ def run_automatic_draw():
         "tx_url": tx_url
     }
     draw_state["past_payouts"].insert(0, payout)
-    print(f"--- DRAW #{draw_state['draw_id']} FINISHED. Winners: {winners} ---")
+    print(f"--- DRAW #{draw_state['draw_id']} FINISHED. Winners: {winners} ---\n")
 
 @app.get("/current-rules")
 def get_current_rules():
