@@ -207,16 +207,27 @@ def run_automatic_draw():
     winners = []
     matched_threshold_count = 0
     
+    print(f"--- DRAW #{draw_state['draw_id']} STARTED ---")
+    print(f"Winning Numbers: {winning_numbers}")
+    print(f"Match Threshold Required: {threshold}")
+
     for p in draw_state["participants"]:
         user_nums = p.get("numbers", [])
-        matches = len(set(user_nums).intersection(set(winning_numbers)))
+        # Tip güvenliği için integer dönüşümü (String/Integer uyuşmazlığı hatasını tamamen önler)
+        user_nums_int = [int(n) for n in user_nums]
+        winning_nums_int = [int(n) for n in winning_numbers]
+        
+        matches = len(set(user_nums_int).intersection(set(winning_nums_int)))
+        print(f"Wallet: {p['wallet']} | User Numbers: {user_nums_int} | Matches Found: {matches}")
+
         if matches >= threshold:
             matched_threshold_count += 1
-            has_token, _ = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
+            has_token, err_msg = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
+            print(f"-> Token Balance Check: {has_token} ({err_msg})")
             if has_token:
                 winners.append(p["wallet"])
             else:
-                print(f"Disqualified: Tokens were transferred out of {p['wallet']} wallet!")
+                print(f"-> DISQUALIFIED: Wallet matched the numbers but failed token requirement!")
 
     tx_url = None
     payout_status = "no_winner"
@@ -249,6 +260,7 @@ def run_automatic_draw():
         "tx_url": tx_url
     }
     draw_state["past_payouts"].insert(0, payout)
+    print(f"--- DRAW #{draw_state['draw_id']} FINISHED. Winners: {winners} ---")
 
 @app.get("/current-rules")
 def get_current_rules():
@@ -323,7 +335,6 @@ def update_settings(draw_id: int, settings: SettingsUpdate, x_admin_token: Optio
     if not x_admin_token or x_admin_token not in active_admin_tokens:
         raise HTTPException(status_code=401, detail="Unauthorized access or session expired!")
     
-    # Pick count (seçilecek numara adedi) için max 10 sınırı kontrolü
     if settings.pick_count < 1 or settings.pick_count > 10:
         raise HTTPException(status_code=400, detail="Pick count must be between 1 and 10.")
         
