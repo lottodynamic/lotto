@@ -9,6 +9,7 @@ import uuid
 import base58
 import base64
 import os
+import requests
 from pathlib import Path
 from dotenv import load_dotenv
 from nacl.signing import VerifyKey
@@ -20,7 +21,6 @@ try:
     from solana.rpc.api import Client
     from solders.pubkey import Pubkey
     from solders.keypair import Keypair
-    from solders.instruction import Instruction, AccountMeta
     from solders.transaction import Transaction
     from solders.system_program import transfer, TransferParams
     SOLANA_LIB_AVAILABLE = True
@@ -44,8 +44,6 @@ OWNER_SECRET_KEY_BASE58 = os.getenv("OWNER_SECRET_KEY_BASE58")
 
 SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=6da794d3-48c2-4fc3-b03e-85c24b81388f"
 solana_client = Client(SOLANA_RPC_URL) if SOLANA_LIB_AVAILABLE else None
-
-TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") if SOLANA_LIB_AVAILABLE else None
 
 draw_state = {
     "draw_id": 1,
@@ -91,32 +89,36 @@ class VerifyModel(BaseModel):
     message: str
 
 def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool, str]:
-    if not SOLANA_LIB_AVAILABLE or not solana_client:
-        print("CRITICAL: Solana libraries unavailable, blocking ticket for safety.")
-        return False, "System token verification is currently unavailable."
-    
+    """Doğrudan Solana JSON-RPC üzerinden cüzdanın SPL token bakiyesini requests ile kesin olarak sorgular."""
     try:
-        wallet_pubkey = Pubkey.from_string(wallet_str)
-        mint_pubkey = Pubkey.from_string(TOKEN_MINT_ADDRESS)
+        payload = {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "getTokenAccountsByOwner",
+            "params": [
+                wallet_str,
+                {"mint": TOKEN_MINT_ADDRESS},
+                {"encoding": "jsonParsed"}
+            ]
+        }
+        headers = {"Content-Type": "application/json"}
+        response = requests.post(SOLANA_RPC_URL, json=payload, headers=headers, timeout=10)
+        data = response.json()
         
+        if "result" not in data or "value" not in data["result"]:
+            return False, 'you do not have any "tokens" in your wallet'
+        
+        accounts = data["result"]["value"]
         total_balance = 0.0
         
-        # Cüzdana ait token hesaplarını doğrudan RPC üzerinden sorgula (Standart ve Token-2022 uyumlu)
-        response = solana_client.get_token_accounts_by_owner(
-            wallet_pubkey,
-            {"mint": mint_pubkey}
-        )
-        
-        if response and hasattr(response, 'value') and response.value:
-            for acc in response.value:
-                acc_pubkey = acc.pubkey
-                balance_resp = solana_client.get_token_account_balance(acc_pubkey)
-                if balance_resp and hasattr(balance_resp, 'value') and balance_resp.value:
-                    if balance_resp.value.ui_amount is not None:
-                        total_balance += float(balance_resp.value.ui_amount)
-                    elif balance_resp.value.amount is not None:
-                        decimals = balance_resp.value.decimals
-                        total_balance += int(balance_resp.value.amount) / (10 ** decimals)
+        for acc in accounts:
+            try:
+                parsed_info = acc["account"]["data"]["parsed"]["info"]
+                token_amount = parsed_info["tokenAmount"]
+                ui_amount = float(token_amount.get("uiAmount", 0.0) or 0.0)
+                total_balance += ui_amount
+            except Exception:
+                pass
         
         if total_balance <= 0:
             return False, 'you do not have any "tokens" in your wallet'
@@ -127,7 +129,7 @@ def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool
             
         return True, ""
     except Exception as e:
-        print("Token balance check error:", e)
+        print("Token balance check RPC error:", e)
         return False, 'you do not have any "tokens" in your wallet'
 
 def execute_real_solana_sol_transfer(winner_wallet_str: str, reward_percentage: float):
@@ -372,7 +374,7 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
         if not (1 <= n <= draw_state["max_number"]):
             raise HTTPException(status_code=400, detail="Numbers must be between 1 and 50.")
 
-    # KATILIM KONTROLÜ: Token tutmayan cüzdanlar kesinlikle reddedilir
+    # KONTROL: Token tutmayan cüzdanlar bura sayesinde kesinlikle engellenir
     has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
