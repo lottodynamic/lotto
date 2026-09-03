@@ -527,11 +527,20 @@
             };
 
             try {
-                const res = await fetch('/admin/update-rules', {
-                    method: 'POST',
+                let res = await fetch('/admin/update-rules', {
+                    method: 'PUT',
                     headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
                     body: JSON.stringify(payload)
                 });
+
+                if (!res.ok) {
+                    res = await fetch('/admin/update-rules', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
+                        body: JSON.stringify(payload)
+                    });
+                }
+
                 const data = await res.json();
                 if (res.ok) {
                     msg.className = "text-xs text-center text-emerald-400 font-semibold";
