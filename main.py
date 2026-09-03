@@ -46,7 +46,6 @@ SOLANA_RPC_URL = "https://mainnet.helius-rpc.com/?api-key=6da794d3-48c2-4fc3-b03
 solana_client = Client(SOLANA_RPC_URL) if SOLANA_LIB_AVAILABLE else None
 
 TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA") if SOLANA_LIB_AVAILABLE else None
-ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL") if SOLANA_LIB_AVAILABLE else None
 
 draw_state = {
     "draw_id": 1,
@@ -91,32 +90,41 @@ class VerifyModel(BaseModel):
     signature: str
     message: str
 
-def get_associated_token_address(wallet_pubkey: Pubkey, mint_pubkey: Pubkey, token_program_id: Pubkey) -> Pubkey:
-    derived, _ = Pubkey.find_program_address(
-        [bytes(wallet_pubkey), bytes(token_program_id), bytes(mint_pubkey)],
-        ASSOCIATED_TOKEN_PROGRAM_ID
-    )
-    return derived
-
 def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool, str]:
     if not SOLANA_LIB_AVAILABLE or not solana_client:
-        return True, ""
+        print("CRITICAL: Solana libraries unavailable, blocking ticket for safety.")
+        return False, "System token verification is currently unavailable."
+    
     try:
         wallet_pubkey = Pubkey.from_string(wallet_str)
         mint_pubkey = Pubkey.from_string(TOKEN_MINT_ADDRESS)
-        mint_info = solana_client.get_account_info(mint_pubkey)
-        active_token_program_id = mint_info.value.owner if (mint_info.value and mint_info.value.owner) else TOKEN_PROGRAM_ID
-        ata = get_associated_token_address(wallet_pubkey, mint_pubkey, active_token_program_id)
-        balance_resp = solana_client.get_token_account_balance(ata)
-        if not balance_resp.value:
+        
+        total_balance = 0.0
+        
+        # Cüzdana ait token hesaplarını doğrudan RPC üzerinden sorgula (Standart ve Token-2022 uyumlu)
+        response = solana_client.get_token_accounts_by_owner(
+            wallet_pubkey,
+            {"mint": mint_pubkey}
+        )
+        
+        if response and hasattr(response, 'value') and response.value:
+            for acc in response.value:
+                acc_pubkey = acc.pubkey
+                balance_resp = solana_client.get_token_account_balance(acc_pubkey)
+                if balance_resp and hasattr(balance_resp, 'value') and balance_resp.value:
+                    if balance_resp.value.ui_amount is not None:
+                        total_balance += float(balance_resp.value.ui_amount)
+                    elif balance_resp.value.amount is not None:
+                        decimals = balance_resp.value.decimals
+                        total_balance += int(balance_resp.value.amount) / (10 ** decimals)
+        
+        if total_balance <= 0:
             return False, 'you do not have any "tokens" in your wallet'
         
-        actual_balance = int(balance_resp.value.amount) / (10 ** balance_resp.value.decimals)
-        if actual_balance <= 0:
-            return False, 'you do not have any "tokens" in your wallet'
-        if actual_balance < required_amt:
+        if total_balance < required_amt:
             formatted_req = f"{required_amt:,}".replace(",", ".")
             return False, f"you must have {formatted_req} tokens in your wallet."
+            
         return True, ""
     except Exception as e:
         print("Token balance check error:", e)
@@ -364,6 +372,7 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
         if not (1 <= n <= draw_state["max_number"]):
             raise HTTPException(status_code=400, detail="Numbers must be between 1 and 50.")
 
+    # KATILIM KONTROLÜ: Token tutmayan cüzdanlar kesinlikle reddedilir
     has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
