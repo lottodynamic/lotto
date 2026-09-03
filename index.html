@@ -21,7 +21,7 @@
 
     <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
         
-        <!-- Left Area: Draw History & Archive (Appears 2nd on mobile, 1st on desktop) -->
+        <!-- Left Area: Draw History & Archive -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col h-full order-2 lg:order-1">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">💸 Draw History & Archive</h3>
@@ -32,7 +32,7 @@
             </div>
         </div>
 
-        <!-- Middle Area: Lottery Interface (Appears 1st on mobile for best UX) -->
+        <!-- Middle Area: Lottery Interface -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative order-1 lg:order-2">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-2">
@@ -92,7 +92,7 @@
             <div id="status-message" class="mt-4 text-center text-sm hidden font-semibold"></div>
         </div>
 
-        <!-- Right Area: Live Participants (Appears 3rd on mobile) -->
+        <!-- Right Area: Live Participants -->
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col h-full order-3 lg:order-3">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">🎟️ Participants</h3>
@@ -105,7 +105,7 @@
 
     </div>
 
-    <!-- HIDDEN ADMIN MODAL -->
+    <!-- ADMIN MODAL -->
     <div id="admin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl relative space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-slate-800">
@@ -209,33 +209,23 @@
 
         async function getProviderForAddress(targetAddress) {
             const providers = getAllProviders();
-
             for (let p of providers) {
-                if (p.publicKey && p.publicKey.toString() === targetAddress) {
-                    return p;
-                }
+                if (p.publicKey && p.publicKey.toString() === targetAddress) return p;
             }
-
             for (let p of providers) {
                 try {
                     const res = await p.connect({ onlyIfTrusted: true }).catch(() => null);
                     const pubKey = res?.publicKey || p.publicKey;
-                    if (pubKey && pubKey.toString() === targetAddress) {
-                        return p;
-                    }
+                    if (pubKey && pubKey.toString() === targetAddress) return p;
                 } catch (e) {}
             }
-
             for (let p of providers) {
                 try {
                     const res = await p.connect();
                     const pubKey = res?.publicKey || p.publicKey;
-                    if (pubKey && pubKey.toString() === targetAddress) {
-                        return p;
-                    }
+                    if (pubKey && pubKey.toString() === targetAddress) return p;
                 } catch (e) {}
             }
-
             return null;
         }
 
@@ -321,10 +311,7 @@
             }
 
             try {
-                if (!provider.publicKey) {
-                    await provider.connect();
-                }
-
+                if (!provider.publicKey) await provider.connect();
                 const walletAddress = provider.publicKey.toString();
                 const messageText = `Token-Lotto Admin Login Confirmation: ${Date.now()}`;
                 const signResult = await signMessageUniversal(provider, messageText);
@@ -372,6 +359,114 @@
             } catch (err) {}
         }
 
+        function buildNumberBalls(count) {
+            const container = document.getElementById('number-inputs-container');
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '1';
+                input.max = currentRules.max_number || 50;
+                input.placeholder = `#${i+1}`;
+                input.className = 'w-12 h-12 sm:w-14 sm:h-14 bg-slate-950 border border-slate-700 rounded-xl text-center font-bold text-base sm:text-lg text-purple-300 focus:outline-none focus:border-purple-500 shadow-inner';
+                container.appendChild(input);
+            }
+        }
+
+        function autoFillNumbers() {
+            const container = document.getElementById('number-inputs-container');
+            const inputs = container.querySelectorAll('input[type="number"]');
+            const pickCount = currentRules.pick_count || 5;
+            const maxNum = currentRules.max_number || 50;
+            
+            let numbers = [];
+            while (numbers.length < pickCount) {
+                let n = Math.floor(Math.random() * maxNum) + 1;
+                if (!numbers.includes(n)) numbers.push(n);
+            }
+            numbers.sort((a, b) => a - b);
+            
+            inputs.forEach((inp, idx) => {
+                if (numbers[idx]) inp.value = numbers[idx];
+            });
+        }
+
+        async function submitTicket() {
+            const msgDiv = document.getElementById('status-message');
+            msgDiv.classList.remove('hidden');
+            
+            const walletInput = document.getElementById('wallet-input').value.trim();
+            if (!walletInput) {
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
+                msgDiv.innerText = "Please enter or autofill your Solana wallet address!";
+                return;
+            }
+
+            const container = document.getElementById('number-inputs-container');
+            const inputs = container.querySelectorAll('input[type="number"]');
+            let numbers = [];
+            inputs.forEach(inp => {
+                let val = parseInt(inp.value);
+                if (!isNaN(val)) numbers.push(val);
+            });
+
+            const pickCount = currentRules.pick_count || 5;
+            if (numbers.length !== pickCount) {
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
+                msgDiv.innerText = `Please enter exactly ${pickCount} lucky numbers!`;
+                return;
+            }
+
+            const maxNum = currentRules.max_number || 50;
+            for (let n of numbers) {
+                if (n < 1 || n > maxNum) {
+                    msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
+                    msgDiv.innerText = `Numbers must be between 1 and ${maxNum}!`;
+                    return;
+                }
+            }
+
+            try {
+                msgDiv.className = "mt-4 text-center text-sm text-purple-300 font-semibold animate-pulse";
+                msgDiv.innerText = "Connecting wallet and requesting signature...";
+
+                let provider = await getProviderForAddress(walletInput) || getDefaultWalletProvider();
+                if (!provider) throw new Error("No compatible Solana wallet found!");
+
+                if (!provider.publicKey) await provider.connect();
+
+                const messageText = `Join Token-Lotto Draw #${currentRules.draw_id || 1} with numbers [${numbers.join(', ')}] at ${Date.now()}`;
+                const signResult = await signMessageUniversal(provider, messageText);
+
+                msgDiv.innerText = "Submitting ticket to server...";
+
+                const res = await fetch('/join-draw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        draw_id: currentRules.draw_id,
+                        wallet: walletInput,
+                        numbers: numbers,
+                        signature: signResult.signature,
+                        message: messageText
+                    })
+                });
+
+                const data = await res.json();
+                if (res.ok) {
+                    msgDiv.className = "mt-4 text-center text-sm text-emerald-400 font-semibold";
+                    msgDiv.innerText = "Successfully joined the lottery! Good luck! 🎟️🚀";
+                    fetchRules();
+                } else {
+                    msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
+                    msgDiv.innerText = data.detail || "Failed to join draw.";
+                }
+            } catch (err) {
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
+                msgDiv.innerText = err.message || "An error occurred while signing or submitting.";
+            }
+        }
+
         async function fetchRules() {
             try {
                 const res = await fetch('/current-rules');
@@ -412,13 +507,83 @@
             } catch (err) {}
         }
 
+        async function updateAdminSettings() {
+            const msg = document.getElementById('admin-msg');
+            msg.classList.remove('hidden');
+            if (!adminAuthToken) {
+                msg.className = "text-xs text-center text-red-400 font-semibold";
+                msg.innerText = "Not authorized. Please login first.";
+                return;
+            }
+
+            const payload = {
+                required_balance: parseFloat(document.getElementById('admin-required-balance').value),
+                reward_percentage: parseFloat(document.getElementById('admin-reward-percentage').value),
+                pick_count: parseInt(document.getElementById('admin-pick-count').value),
+                match_threshold: parseInt(document.getElementById('admin-match-threshold').value),
+                max_winners: parseInt(document.getElementById('admin-max-winners').value),
+                hours: parseInt(document.getElementById('admin-hours').value) || 0,
+                minutes: parseInt(document.getElementById('admin-minutes').value) || 2
+            };
+
+            try {
+                const res = await fetch('/admin/update-rules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    msg.className = "text-xs text-center text-emerald-400 font-semibold";
+                    msg.innerText = "Rules updated successfully!";
+                    fetchRules();
+                } else {
+                    msg.className = "text-xs text-center text-red-400 font-semibold";
+                    msg.innerText = data.detail || "Failed to update rules.";
+                }
+            } catch (e) {
+                msg.className = "text-xs text-center text-red-400 font-semibold";
+                msg.innerText = "An error occurred.";
+            }
+        }
+
+        async function runDrawNow() {
+            const msg = document.getElementById('admin-msg');
+            msg.classList.remove('hidden');
+            if (!adminAuthToken) {
+                msg.className = "text-xs text-center text-red-400 font-semibold";
+                msg.innerText = "Not authorized. Please login first.";
+                return;
+            }
+
+            try {
+                msg.className = "text-xs text-center text-purple-300 font-semibold animate-pulse";
+                msg.innerText = "Triggering draw and distributing rewards...";
+                const res = await fetch('/admin/run-draw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` }
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    msg.className = "text-xs text-center text-emerald-400 font-semibold";
+                    msg.innerText = "Draw executed successfully!";
+                    fetchRules();
+                    closeAdminModal();
+                } else {
+                    msg.className = "text-xs text-center text-red-400 font-semibold";
+                    msg.innerText = data.detail || "Failed to run draw.";
+                }
+            } catch (e) {
+                msg.className = "text-xs text-center text-red-400 font-semibold";
+                msg.innerText = "An error occurred.";
+            }
+        }
+
         setInterval(() => {
             if (currentRules.status === 'ready' && remainingSeconds > 0) {
                 remainingSeconds--;
                 renderMiddleBox();
-                if (remainingSeconds === 0) {
-                    fetchRules();
-                }
+                if (remainingSeconds === 0) fetchRules();
             }
         }, 1000);
 
@@ -577,6 +742,9 @@
                 container.appendChild(div);
             });
         }
+
+        // Sayfa açıldığında verileri ve kuralları çek
+        fetchRules();
     </script>
 </body>
 </html>
