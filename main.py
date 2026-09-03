@@ -196,6 +196,7 @@ def run_automatic_draw():
         matches = len(set(user_nums).intersection(set(winning_numbers)))
         if matches >= threshold:
             matched_threshold_count += 1
+            # Çekiliş anında token hala bu cüzdanda duruyor mu kontrol edilir (Manipülasyon önlemi)
             has_token, _ = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
             if has_token:
                 winners.append(p["wallet"])
@@ -218,7 +219,7 @@ def run_automatic_draw():
         tx_url = None
         req_bal_formatted = f"{draw_state['required_balance']:,}".replace(",", ".")
         if matched_threshold_count > 0:
-            draw_state["result_info"] = f"There were tickets with correct numbers, but the wallet did not have the required {req_bal_formatted} tokens condition."
+            draw_state["result_info"] = f"There were tickets with correct numbers, but the wallet did not have the required {req_bal_formatted} tokens condition at draw time."
         else:
             draw_state["result_info"] = "No tickets guessed the correct numbers."
         payout_status = "no_winner"
@@ -367,7 +368,7 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
         print("Ticket Signature Verify Error:", e)
         raise HTTPException(status_code=400, detail="Wallet signature for the ticket could not be verified!")
 
-    # ZORUNLU NUMARA GİRİŞİ KONTROLÜ
+    # 1. ZORUNLU NUMARA GİRİŞİ KONTROLÜ
     if not ticket.numbers or len(ticket.numbers) != draw_state["pick_count"]:
         raise HTTPException(status_code=400, detail=f"You must select exactly {draw_state['pick_count']} numbers (Manual or Random Fill is mandatory).")
     
@@ -375,12 +376,12 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
         if not (1 <= n <= draw_state["max_number"]):
             raise HTTPException(status_code=400, detail="Numbers must be between 1 and 50.")
 
-    # ÇEKİLİŞ BAŞINA TEK KATILIM KONTROLÜ (Aynı cüzdan tekrar katılamaz, numaralarını değiştiremez)
+    # 2. ÇEKİLİŞ BAŞINA TEK KATILIM KONTROLÜ (Aynı cüzdan tekrar katılamaz, numaralarını değiştiremez)
     existing = next((p for p in draw_state["participants"] if p["wallet"] == ticket.wallet), None)
     if existing:
         raise HTTPException(status_code=400, detail="This wallet has already participated in this draw.")
 
-    # TOKEN BAKİYE KONTROLÜ
+    # 3. TOKEN BAKİYE KONTROLÜ (Katılım Anı)
     has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
