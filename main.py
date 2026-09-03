@@ -21,6 +21,7 @@ try:
     from solana.rpc.api import Client
     from solders.pubkey import Pubkey
     from solders.keypair import Keypair
+    from solders.message import Message
     from solders.transaction import Transaction
     from solders.system_program import transfer, TransferParams
     SOLANA_LIB_AVAILABLE = True
@@ -205,20 +206,39 @@ def execute_real_solana_sol_transfers_to_winners(winners: List[str], reward_perc
                     )
                 )
                 
-                txn = Transaction.new_signed_with_payer(
+                # Ham mesaj ve imzalama işlemi (Kütüphane çakışmalarını tamamen önler)
+                msg = Message.new_with_blockhash(
                     instructions=[transfer_ix],
                     payer=owner_keypair.pubkey(),
-                    signing_keypairs=[owner_keypair],
-                    recent_blockhash=recent_blockhash
+                    blockhash=recent_blockhash
                 )
+                txn = Transaction.new_unsigned(msg)
+                txn.sign([owner_keypair], recent_blockhash)
                 
-                print(f"Sending transaction to winner: {winner_wallet_str} (Amount: {share_per_winner} lamports)")
-                res = solana_client.send_transaction(txn)
-                print(f"Send transaction response object: {res}")
+                # Doğrudan RPC üzerinden Ham İşlem Gönderimi (Raw JSON-RPC sendTransaction)
+                raw_tx_bytes = bytes(txn)
+                b64_encoded_tx = base64.b64encode(raw_tx_bytes).decode('utf-8')
                 
-                tx_sig = str(res.value) if hasattr(res, 'value') else str(res)
-                tx_signatures.append(f"https://solscan.io/tx/{tx_sig}")
-                print(f"SUCCESSFUL TRANSFER to {winner_wallet_str} - TX Signature:", tx_sig)
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "sendTransaction",
+                    "params": [
+                        b64_encoded_tx,
+                        {"encoding": "base64"}
+                    ]
+                }
+                headers = {"Content-Type": "application/json"}
+                response = requests.post(SOLANA_RPC_URL, json=payload, headers=headers, timeout=15)
+                res_data = response.json()
+                
+                if "result" in res_data:
+                    tx_sig = res_data["result"]
+                    tx_signatures.append(f"https://solscan.io/tx/{tx_sig}")
+                    print(f"SUCCESSFUL TRANSFER to {winner_wallet_str} - TX Signature:", tx_sig)
+                else:
+                    print(f"ERROR in RPC sendTransaction response for {winner_wallet_str}:", res_data)
+                    
             except Exception as inner_ex:
                 print(f"ERROR executing transfer for specific winner {winner_wallet_str}: {inner_ex}")
                 import traceback
@@ -275,8 +295,7 @@ def run_automatic_draw():
             draw_state["result_info"] = f"Draw completed! {len(winners)} winner(s) shared the reward pool and SOL was sent!"
             payout_status = "winner"
         else:
-            # DÜZELTME: Kazananları silmiyoruz! Transferin hata yaptığını logluyoruz ama kazanan listesini koruyoruz.
-            draw_state["result_info"] = f"Winners successfully found ({len(winners)}), but SOL transfer failed or returned no signature. Check terminal logs!"
+            draw_state["result_info"] = f"Winners successfully found ({len(winners)}), but SOL transfer failed. Check terminal logs!"
             payout_status = "transfer_error"
     else:
         req_bal_formatted = f"{draw_state['required_balance']:,}".replace(",", ".")
@@ -448,7 +467,7 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
     if existing:
         raise HTTPException(status_code=400, detail="This wallet has already participated in this draw.")
 
-    has_token, err_msg = check_wallet_token_balance(token_wallet:=ticket.wallet, draw_state["required_balance"])
+    has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
 
