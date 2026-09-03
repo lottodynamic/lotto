@@ -5,5 +5,5 @@ requests
 base58
 solana
 solders
+pynacl
 python-dotenv
-PyNaCl
