@@ -11,32 +11,32 @@
             -webkit-appearance: none;
             margin: 0;
         }
-        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #020617; }
         ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #475569; }
     </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center py-6 px-3 sm:p-4">
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div class="max-w-6xl w-full grid grid-cols-1 md:grid-cols-3 gap-6">
         
         <!-- Left Area: Draw History & Archive -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col h-full order-2 lg:order-1">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-full">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">💸 Draw History & Archive</h3>
                 <span class="text-[10px] text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/50 font-mono">SOL Rewarded</span>
             </div>
-            <div id="payouts-list" class="space-y-3 overflow-y-auto max-h-[450px] lg:max-h-[520px] pr-1 flex-1">
+            <div id="payouts-list" class="space-y-3 overflow-y-auto max-h-[520px] pr-1 flex-1">
                 <p class="text-xs text-slate-500 text-center py-6">No completed draws yet.</p>
             </div>
         </div>
 
         <!-- Middle Area: Lottery Interface -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-6 shadow-2xl relative order-1 lg:order-2">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-2xl relative">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center gap-2">
-                    <h1 class="text-xl sm:text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
+                    <h1 class="text-2xl font-black tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">
                         TOKEN-LOTTO 🚀
                     </h1>
                 </div>
@@ -48,17 +48,17 @@
             <div class="mb-5 bg-slate-950/80 border border-slate-800 rounded-lg p-3 space-y-2 text-xs">
                 <div class="flex justify-between items-center">
                     <span class="text-slate-400">Required Token: <b id="required-token-info" class="text-purple-300 font-mono">100,000 Token</b></span>
-                    <span id="token-mint-short" class="font-mono text-slate-500 text-[10px] truncate max-w-[140px] sm:max-w-[180px]">Mint: ...</span>
+                    <span id="token-mint-short" class="font-mono text-slate-500 text-[10px] truncate max-w-[180px]">Mint: ...</span>
                 </div>
                 <div class="pt-2 border-t border-slate-800 flex justify-between items-center">
                     <span class="text-slate-400">Owner Wallet:</span>
-                    <span id="owner-wallet-short" class="font-mono text-purple-400 text-[10px] truncate max-w-[180px] sm:max-w-[220px]">...</span>
+                    <span id="owner-wallet-short" class="font-mono text-purple-400 text-[10px] truncate max-w-[220px]">...</span>
                 </div>
             </div>
 
-            <div class="bg-gradient-to-br from-purple-900/40 to-slate-900 border border-purple-500/30 rounded-xl p-4 sm:p-5 mb-6 text-center shadow-inner">
+            <div class="bg-gradient-to-br from-purple-900/40 to-slate-900 border border-purple-500/30 rounded-xl p-5 mb-6 text-center shadow-inner">
                 <p class="text-xs text-purple-300 font-bold uppercase tracking-wider">Active Reward Pool</p>
-                <h2 id="pool-amount" class="text-2xl sm:text-3xl font-extrabold text-white mt-1">SOL Rewarded Pool</h2>
+                <h2 id="pool-amount" class="text-3xl font-extrabold text-white mt-1">SOL Rewarded Pool</h2>
                 
                 <div id="countdown-or-winner-box" class="mt-4 pt-3 border-t border-purple-500/20"></div>
             </div>
@@ -81,11 +81,11 @@
                         ✨ Random Fill
                     </button>
                 </div>
-                <div id="number-inputs-container" class="flex flex-wrap justify-center gap-2 sm:gap-3 my-4"></div>
+                <div id="number-inputs-container" class="flex flex-wrap justify-center gap-3 my-4"></div>
             </div>
 
             <button onclick="submitTicket()" 
-                class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all duration-200 cursor-pointer tracking-wide text-sm sm:text-base">
+                class="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all duration-200 cursor-pointer tracking-wide">
                 Sign with Wallet & Join 🎟️
             </button>
 
@@ -93,21 +93,21 @@
         </div>
 
         <!-- Right Area: Live Participants -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 sm:p-5 shadow-2xl flex flex-col h-full order-3 lg:order-3">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-2xl flex flex-col h-full">
             <div class="flex justify-between items-center mb-4 pb-3 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-slate-200 uppercase tracking-wide">🎟️ Participants</h3>
                 <span id="participant-count-badge" class="text-xs bg-purple-950 text-purple-300 px-2.5 py-0.5 rounded-full border border-purple-800 font-bold">0 Participants</span>
             </div>
-            <div id="participants-list" class="space-y-2 overflow-y-auto max-h-[450px] lg:max-h-[520px] pr-1 flex-1">
+            <div id="participants-list" class="space-y-2 overflow-y-auto max-h-[520px] pr-1 flex-1">
                 <p class="text-xs text-slate-500 text-center py-6">No participants yet.</p>
             </div>
         </div>
 
     </div>
 
-    <!-- ADMIN MODAL -->
+    <!-- HIDDEN ADMIN MODAL -->
     <div id="admin-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 max-w-md w-full shadow-2xl relative space-y-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-md w-full shadow-2xl relative space-y-4">
             <div class="flex justify-between items-center pb-3 border-b border-slate-800">
                 <h3 class="text-sm font-bold text-purple-400 uppercase tracking-wide">👑 Admin Control Panel</h3>
                 <button onclick="closeAdminModal()" class="text-slate-400 hover:text-white text-sm font-bold cursor-pointer">✕</button>
@@ -209,23 +209,40 @@
 
         async function getProviderForAddress(targetAddress) {
             const providers = getAllProviders();
+
             for (let p of providers) {
-                if (p.publicKey && p.publicKey.toString() === targetAddress) return p;
+                if (p.publicKey && p.publicKey.toString() === targetAddress) {
+                    console.log(`Matching wallet found: ${p.walletName}`);
+                    return p;
+                }
             }
+
             for (let p of providers) {
                 try {
                     const res = await p.connect({ onlyIfTrusted: true }).catch(() => null);
                     const pubKey = res?.publicKey || p.publicKey;
-                    if (pubKey && pubKey.toString() === targetAddress) return p;
-                } catch (e) {}
+                    if (pubKey && pubKey.toString() === targetAddress) {
+                        console.log(`Matching wallet found from connection: ${p.walletName}`);
+                        return p;
+                    }
+                } catch (e) {
+                    // Silently pass
+                }
             }
+
             for (let p of providers) {
                 try {
                     const res = await p.connect();
                     const pubKey = res?.publicKey || p.publicKey;
-                    if (pubKey && pubKey.toString() === targetAddress) return p;
-                } catch (e) {}
+                    if (pubKey && pubKey.toString() === targetAddress) {
+                        console.log(`Matching wallet found via popup connection: ${p.walletName}`);
+                        return p;
+                    }
+                } catch (e) {
+                    console.warn(`${p.walletName} connection prompt was rejected or closed.`);
+                }
             }
+
             return null;
         }
 
@@ -251,7 +268,9 @@
                     } else {
                         signatureBytes = signed;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.warn("Provider signMessage threw an error directly, falling back to alternative method...", e);
+                }
             }
 
             if (!signatureBytes && typeof provider.request === 'function') {
@@ -266,7 +285,9 @@
                     } else {
                         signatureBytes = res;
                     }
-                } catch (e) {}
+                } catch (e) {
+                    console.warn("Provider request signMessage failed:", e);
+                }
             }
 
             if (!signingPublicKey && provider.publicKey) {
@@ -311,7 +332,10 @@
             }
 
             try {
-                if (!provider.publicKey) await provider.connect();
+                if (!provider.publicKey) {
+                    await provider.connect();
+                }
+
                 const walletAddress = provider.publicKey.toString();
                 const messageText = `Token-Lotto Admin Login Confirmation: ${Date.now()}`;
                 const signResult = await signMessageUniversal(provider, messageText);
@@ -337,6 +361,7 @@
                     errorMsg.innerText = data.detail || "Only the Owner wallet can log in!";
                 }
             } catch (e) {
+                console.error(e);
                 errorMsg.classList.remove('hidden');
                 errorMsg.innerText = "Signing was rejected or an error occurred.";
             }
@@ -356,114 +381,8 @@
                 } else {
                     alert("No supported Solana wallet found!");
                 }
-            } catch (err) {}
-        }
-
-        function buildNumberBalls(count) {
-            const container = document.getElementById('number-inputs-container');
-            container.innerHTML = '';
-            for (let i = 0; i < count; i++) {
-                const input = document.createElement('input');
-                input.type = 'number';
-                input.min = '1';
-                input.max = currentRules.max_number || 50;
-                input.placeholder = `#${i+1}`;
-                input.className = 'w-12 h-12 sm:w-14 sm:h-14 bg-slate-950 border border-slate-700 rounded-xl text-center font-bold text-base sm:text-lg text-purple-300 focus:outline-none focus:border-purple-500 shadow-inner';
-                container.appendChild(input);
-            }
-        }
-
-        function autoFillNumbers() {
-            const container = document.getElementById('number-inputs-container');
-            const inputs = container.querySelectorAll('input[type="number"]');
-            const pickCount = currentRules.pick_count || 5;
-            const maxNum = currentRules.max_number || 50;
-            
-            let numbers = [];
-            while (numbers.length < pickCount) {
-                let n = Math.floor(Math.random() * maxNum) + 1;
-                if (!numbers.includes(n)) numbers.push(n);
-            }
-            numbers.sort((a, b) => a - b);
-            
-            inputs.forEach((inp, idx) => {
-                if (numbers[idx]) inp.value = numbers[idx];
-            });
-        }
-
-        async function submitTicket() {
-            const msgDiv = document.getElementById('status-message');
-            msgDiv.classList.remove('hidden');
-            
-            const walletInput = document.getElementById('wallet-input').value.trim();
-            if (!walletInput) {
-                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
-                msgDiv.innerText = "Please enter or autofill your Solana wallet address!";
-                return;
-            }
-
-            const container = document.getElementById('number-inputs-container');
-            const inputs = container.querySelectorAll('input[type="number"]');
-            let numbers = [];
-            inputs.forEach(inp => {
-                let val = parseInt(inp.value);
-                if (!isNaN(val)) numbers.push(val);
-            });
-
-            const pickCount = currentRules.pick_count || 5;
-            if (numbers.length !== pickCount) {
-                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
-                msgDiv.innerText = `Please enter exactly ${pickCount} lucky numbers!`;
-                return;
-            }
-
-            const maxNum = currentRules.max_number || 50;
-            for (let n of numbers) {
-                if (n < 1 || n > maxNum) {
-                    msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
-                    msgDiv.innerText = `Numbers must be between 1 and ${maxNum}!`;
-                    return;
-                }
-            }
-
-            try {
-                msgDiv.className = "mt-4 text-center text-sm text-purple-300 font-semibold animate-pulse";
-                msgDiv.innerText = "Connecting wallet and requesting signature...";
-
-                let provider = await getProviderForAddress(walletInput) || getDefaultWalletProvider();
-                if (!provider) throw new Error("No compatible Solana wallet found!");
-
-                if (!provider.publicKey) await provider.connect();
-
-                const messageText = `Join Token-Lotto Draw #${currentRules.draw_id || 1} with numbers [${numbers.join(', ')}] at ${Date.now()}`;
-                const signResult = await signMessageUniversal(provider, messageText);
-
-                msgDiv.innerText = "Submitting ticket to server...";
-
-                const res = await fetch('/join-draw', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        draw_id: currentRules.draw_id,
-                        wallet: walletInput,
-                        numbers: numbers,
-                        signature: signResult.signature,
-                        message: messageText
-                    })
-                });
-
-                const data = await res.json();
-                if (res.ok) {
-                    msgDiv.className = "mt-4 text-center text-sm text-emerald-400 font-semibold";
-                    msgDiv.innerText = "Successfully joined the lottery! Good luck! 🎟️🚀";
-                    fetchRules();
-                } else {
-                    msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
-                    msgDiv.innerText = data.detail || "Failed to join draw.";
-                }
             } catch (err) {
-                msgDiv.className = "mt-4 text-center text-sm text-red-400 font-semibold";
-                msgDiv.innerText = err.message || "An error occurred while signing or submitting.";
+                console.error(err);
             }
         }
 
@@ -504,87 +423,8 @@
                 if (container.children.length !== (currentRules.pick_count || 5)) {
                     buildNumberBalls(currentRules.pick_count || 5);
                 }
-            } catch (err) {}
-        }
-
-        async function updateAdminSettings() {
-            const msg = document.getElementById('admin-msg');
-            msg.classList.remove('hidden');
-            if (!adminAuthToken) {
-                msg.className = "text-xs text-center text-red-400 font-semibold";
-                msg.innerText = "Not authorized. Please login first.";
-                return;
-            }
-
-            const payload = {
-                required_balance: parseFloat(document.getElementById('admin-required-balance').value),
-                reward_percentage: parseFloat(document.getElementById('admin-reward-percentage').value),
-                pick_count: parseInt(document.getElementById('admin-pick-count').value),
-                match_threshold: parseInt(document.getElementById('admin-match-threshold').value),
-                max_winners: parseInt(document.getElementById('admin-max-winners').value),
-                hours: parseInt(document.getElementById('admin-hours').value) || 0,
-                minutes: parseInt(document.getElementById('admin-minutes').value) || 2
-            };
-
-            try {
-                let res = await fetch('/admin/update-rules', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!res.ok) {
-                    res = await fetch('/admin/update-rules', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` },
-                        body: JSON.stringify(payload)
-                    });
-                }
-
-                const data = await res.json();
-                if (res.ok) {
-                    msg.className = "text-xs text-center text-emerald-400 font-semibold";
-                    msg.innerText = "Rules updated successfully!";
-                    fetchRules();
-                } else {
-                    msg.className = "text-xs text-center text-red-400 font-semibold";
-                    msg.innerText = data.detail || "Failed to update rules.";
-                }
-            } catch (e) {
-                msg.className = "text-xs text-center text-red-400 font-semibold";
-                msg.innerText = "An error occurred.";
-            }
-        }
-
-        async function runDrawNow() {
-            const msg = document.getElementById('admin-msg');
-            msg.classList.remove('hidden');
-            if (!adminAuthToken) {
-                msg.className = "text-xs text-center text-red-400 font-semibold";
-                msg.innerText = "Not authorized. Please login first.";
-                return;
-            }
-
-            try {
-                msg.className = "text-xs text-center text-purple-300 font-semibold animate-pulse";
-                msg.innerText = "Triggering draw and distributing rewards...";
-                const res = await fetch('/admin/run-draw', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${adminAuthToken}` }
-                });
-                const data = await res.json();
-                if (res.ok) {
-                    msg.className = "text-xs text-center text-emerald-400 font-semibold";
-                    msg.innerText = "Draw executed successfully!";
-                    fetchRules();
-                    closeAdminModal();
-                } else {
-                    msg.className = "text-xs text-center text-red-400 font-semibold";
-                    msg.innerText = data.detail || "Failed to run draw.";
-                }
-            } catch (e) {
-                msg.className = "text-xs text-center text-red-400 font-semibold";
-                msg.innerText = "An error occurred.";
+            } catch (err) {
+                console.error("Connection error:", err);
             }
         }
 
@@ -592,7 +432,9 @@
             if (currentRules.status === 'ready' && remainingSeconds > 0) {
                 remainingSeconds--;
                 renderMiddleBox();
-                if (remainingSeconds === 0) fetchRules();
+                if (remainingSeconds === 0) {
+                    fetchRules();
+                }
             }
         }, 1000);
 
@@ -600,7 +442,7 @@
             const box = document.getElementById('countdown-or-winner-box');
             if (currentRules.winning_numbers && currentRules.winning_numbers.length > 0) {
                 let ballsHTML = currentRules.winning_numbers.map(n => 
-                    `<span class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 text-white font-extrabold text-sm shadow-lg border border-pink-300/40">${n}</span>`
+                    `<span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-gradient-to-br from-orange-500 to-pink-600 text-white font-extrabold text-sm shadow-lg border border-pink-300/40">${n}</span>`
                 ).join('');
                 box.innerHTML = `
                     <p class="text-xs text-pink-400 font-bold uppercase tracking-wide mb-2">🎰 DRAW CONCLUDED</p>
@@ -611,7 +453,7 @@
                 let pickCount = currentRules.pick_count || 5;
                 let questionBallsHTML = '';
                 for (let i = 0; i < pickCount; i++) {
-                    questionBallsHTML += `<span class="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-slate-800 text-purple-300 font-extrabold text-sm shadow-inner border border-purple-500/30">?</span>`;
+                    questionBallsHTML += `<span class="inline-flex items-center justify-center w-10 h-10 rounded-full bg-slate-800 text-purple-300 font-extrabold text-sm shadow-inner border border-purple-500/30">?</span>`;
                 }
 
                 let timeText = "";
@@ -685,8 +527,8 @@
                 let winningBallsHtml = winningNums.map(n => {
                     let isMatchedByAny = (p.participants || []).some(part => (part.numbers || []).includes(n));
                     let ballClass = isMatchedByAny 
-                        ? 'w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-emerald-500 text-slate-950 font-extrabold text-xs flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.8)] border border-emerald-300'
-                        : 'w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-slate-900 text-slate-300 font-bold text-xs flex items-center justify-center border border-slate-700';
+                        ? 'w-7 h-7 rounded-full bg-emerald-500 text-slate-950 font-extrabold text-xs flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.8)] border border-emerald-300'
+                        : 'w-7 h-7 rounded-full bg-slate-900 text-slate-300 font-bold text-xs flex items-center justify-center border border-slate-700';
                     return `<span class="${ballClass}">${n}</span>`;
                 }).join('');
 
@@ -696,8 +538,8 @@
                         let partNumsHtml = (part.numbers || []).map(n => {
                             let isMatch = winningNums.includes(n);
                             let numClass = isMatch
-                                ? 'w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500 text-slate-950 font-extrabold text-[11px] flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.8)] border border-emerald-300'
-                                : 'w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-slate-950 text-slate-400 font-bold text-[11px] flex items-center justify-center border border-slate-800';
+                                ? 'w-6 h-6 rounded-full bg-emerald-500 text-slate-950 font-extrabold text-[11px] flex items-center justify-center shadow-[0_0_10px_rgba(16,185,129,0.8)] border border-emerald-300'
+                                : 'w-6 h-6 rounded-full bg-slate-950 text-slate-400 font-bold text-[11px] flex items-center justify-center border border-slate-800';
                             return `<span class="${numClass}">${n}</span>`;
                         }).join('');
 
@@ -743,8 +585,8 @@
                         <div class="flex flex-wrap gap-1.5 py-1">${winningBallsHtml}</div>
                     </div>
                     <div class="space-y-1.5 pt-1">
-                        <span class="text-[10px] text-slate-400 uppercase tracking-wide block font-semibold">Participants & Predictions:</span>
-                        <div class="space-y-1.5 max-h-40 overflow-y-auto pr-1">${participantsHtml}</div>
+                        <span class="text-[10px] text-slate-400 uppercase tracking-wide block font-semibold">Participant Wallets & Predictions:</span>
+                        <div class="space-y-1 max-h-40 overflow-y-auto pr-1">${participantsHtml}</div>
                     </div>
                     ${txSection}
                 `;
@@ -752,8 +594,174 @@
             });
         }
 
-        // Sayfa açıldığında verileri ve kuralları çek
+        function buildNumberBalls(count) {
+            const container = document.getElementById('number-inputs-container');
+            container.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                const input = document.createElement('input');
+                input.type = 'number';
+                input.min = '1';
+                input.max = currentRules.max_number || 50;
+                input.placeholder = `#${i+1}`;
+                input.className = 'ticket-number w-14 h-14 rounded-full bg-gradient-to-br from-purple-600 via-indigo-600 to-pink-600 text-white text-center text-lg font-extrabold focus:outline-none focus:ring-4 focus:ring-purple-400 shadow-lg border-2 border-purple-300/40';
+                
+                input.addEventListener('input', function() {
+                    let val = parseInt(this.value);
+                    if (val < 1) this.value = 1;
+                    if (val > (currentRules.max_number || 50)) this.value = currentRules.max_number || 50;
+                });
+                input.addEventListener('keydown', function(e) {
+                    if (['e', 'E', '+', '-', '.'].includes(e.key)) e.preventDefault();
+                });
+                container.appendChild(input);
+            }
+        }
+
+        function autoFillNumbers() {
+            const inputs = document.querySelectorAll('.ticket-number');
+            const count = currentRules.pick_count || 5;
+            const max = currentRules.max_number || 50;
+            let numbers = [];
+            while (numbers.length < count) {
+                let r = Math.floor(Math.random() * max) + 1;
+                if (!numbers.includes(r)) numbers.push(r);
+            }
+            numbers.sort((a, b) => a - b);
+            inputs.forEach((input, index) => { input.value = numbers[index]; });
+        }
+
+        async function submitTicket() {
+            const walletInput = document.getElementById('wallet-input').value.trim();
+            const msgDiv = document.getElementById('status-message');
+            msgDiv.classList.remove('hidden');
+
+            if (!walletInput || walletInput.length < 32) {
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 block font-semibold";
+                msgDiv.innerText = "⚠️ Please enter a valid Solana wallet address first or use the 'Autofill from Wallet' button!";
+                return;
+            }
+
+            msgDiv.className = "mt-4 text-center text-sm text-purple-400 block font-semibold animate-pulse";
+            msgDiv.innerText = "🔍 Searching for wallet for the pasted address...";
+
+            let provider = await getProviderForAddress(walletInput);
+
+            if (!provider) {
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 block font-semibold";
+                msgDiv.innerText = `⚠️ No account belonging to "${walletInput.substring(0,6)}..." was found in wallets open in your browser or the connection was rejected!`;
+                return;
+            }
+
+            const inputs = document.querySelectorAll('.ticket-number');
+            let numbers = [];
+            inputs.forEach(input => { if (input.value) numbers.push(parseInt(input.value)); });
+
+            try {
+                msgDiv.className = "mt-4 text-center text-sm text-purple-400 block font-semibold animate-pulse";
+                msgDiv.innerText = `✍️ Waiting for signature from ${provider.walletName} wallet...`;
+
+                const messageText = `Token-Lotto Ticket Confirmation - Draw #${currentRules.draw_id} - Numbers: ${numbers.join(',')} - Time: ${Date.now()}`;
+                
+                const signResult = await signMessageUniversal(provider, messageText);
+                const signatureBase64 = signResult.signature;
+                const signingWallet = signResult.publicKey;
+
+                if (signingWallet && walletInput !== signingWallet) {
+                    msgDiv.className = "mt-4 text-center text-sm text-red-400 block font-semibold";
+                    msgDiv.innerText = `⚠️ Security Error: Address in box (${walletInput.substring(0,6)}...) and signing wallet account (${signingWallet.substring(0,6)}...) do not match!`;
+                    return;
+                }
+
+                msgDiv.innerText = "⏳ Sending ticket to server and verifying token balance...";
+
+                const response = await fetch('/submit-ticket', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        wallet: walletInput, 
+                        numbers: numbers,
+                        signature: signatureBase64,
+                        message: messageText
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    msgDiv.className = "mt-4 text-center text-sm text-green-400 block font-semibold";
+                    msgDiv.innerText = "🎉 " + data.message;
+                    fetchRules();
+                } else {
+                    msgDiv.className = "mt-4 text-center text-sm text-red-400 block font-semibold";
+                    msgDiv.innerText = "⚠️ " + data.detail;
+                }
+            } catch (err) {
+                console.error(err);
+                msgDiv.className = "mt-4 text-center text-sm text-red-400 block font-semibold";
+                msgDiv.innerText = "⚠️ Signing cancelled or wallet error.";
+            }
+        }
+
+        async function updateAdminSettings() {
+            const msg = document.getElementById('admin-msg');
+            msg.classList.remove('hidden');
+            const drawId = currentRules.draw_id || 1;
+            const payload = {
+                pick_count: parseInt(document.getElementById('admin-pick-count').value) || 5,
+                match_threshold: parseInt(document.getElementById('admin-match-threshold').value) || 5,
+                max_winners: parseInt(document.getElementById('admin-max-winners').value) || 1,
+                required_balance: parseInt(document.getElementById('admin-required-balance').value) || 100000,
+                reward_percentage: parseFloat(document.getElementById('admin-reward-percentage').value) || 10,
+                hours: parseInt(document.getElementById('admin-hours').value) || 0,
+                minutes: parseInt(document.getElementById('admin-minutes').value) || 2
+            };
+
+            try {
+                const res = await fetch(`/admin/update-settings/${drawId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'x-admin-token': adminAuthToken },
+                    body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    msg.className = "text-xs text-center text-green-400 block font-semibold";
+                    msg.innerText = "Rules updated and new draw started!";
+                    fetchRules();
+                } else {
+                    const errData = await res.json();
+                    msg.className = "text-xs text-center text-red-400 block font-semibold";
+                    msg.innerText = "Error: " + (errData.detail || "Unauthorized operation");
+                }
+            } catch(e) {
+                msg.className = "text-xs text-center text-red-400 block font-semibold";
+                msg.innerText = "Connection error.";
+            }
+        }
+
+        async function runDrawNow() {
+            const msg = document.getElementById('admin-msg');
+            msg.classList.add('hidden');
+            const drawId = currentRules.draw_id || 1;
+            try {
+                const res = await fetch(`/admin/run-draw/${drawId}`, {
+                    method: 'POST',
+                    headers: { 'x-admin-token': adminAuthToken }
+                });
+                if (res.ok) {
+                    msg.className = "text-xs text-center text-green-400 block font-semibold";
+                    msg.innerText = "Draw triggered and winners determined!";
+                    fetchRules();
+                } else {
+                    const errData = await res.json();
+                    msg.className = "text-xs text-center text-red-400 block font-semibold";
+                    msg.innerText = "Error: " + (errData.detail || "Unauthorized operation");
+                }
+            } catch(e) {
+                msg.className = "text-xs text-center text-red-400 block font-semibold";
+                msg.innerText = "Connection error.";
+            }
+        }
+
         fetchRules();
+        setInterval(fetchRules, 10000);
     </script>
 </body>
 </html>
