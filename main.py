@@ -89,7 +89,6 @@ class VerifyModel(BaseModel):
     message: str
 
 def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool, str]:
-    """Doğrudan Solana JSON-RPC üzerinden cüzdanın SPL token bakiyesini requests ile kesin olarak sorgular."""
     try:
         payload = {
             "jsonrpc": "2.0",
@@ -132,7 +131,7 @@ def check_wallet_token_balance(wallet_str: str, required_amt: int) -> tuple[bool
         print("Token balance check RPC error:", e)
         return False, 'you do not have any "tokens" in your wallet'
 
-def execute_real_solana_sol_transfer(winner_wallet_str: str, reward_percentage: float):
+def execute_real_solana_sol_transfers_to_winners(winners: List[str], reward_percentage: float):
     if not SOLANA_LIB_AVAILABLE:
         print("CRITICAL ERROR: Solana libraries are not installed!")
         return None
@@ -142,39 +141,56 @@ def execute_real_solana_sol_transfer(winner_wallet_str: str, reward_percentage: 
         
     try:
         owner_keypair = Keypair.from_base58_string(OWNER_SECRET_KEY_BASE58)
-        winner_pubkey = Pubkey.from_string(winner_wallet_str)
-        
         owner_balance_resp = solana_client.get_balance(owner_keypair.pubkey())
         owner_lamports = owner_balance_resp.value
         
-        transfer_lamports = int(owner_lamports * (reward_percentage / 100.0))
-        if transfer_lamports < 1000:
-            print("Transfer lamports amount is too low:", transfer_lamports)
+        total_reward_lamports = int(owner_lamports * (reward_percentage / 100.0))
+        
+        fee_buffer = 15000 * len(winners)
+        if owner_lamports <= fee_buffer + 1000:
+            print("Owner balance is too low to cover transfers and network fees.")
+            return None
+            
+        max_available = owner_lamports - fee_buffer
+        if total_reward_lamports > max_available:
+            total_reward_lamports = max_available
+            
+        if total_reward_lamports <= 0:
+            print("Total reward lamports calculated is 0 or negative.")
+            return None
+            
+        share_per_winner = total_reward_lamports // len(winners)
+        if share_per_winner < 1000:
+            print("Share per winner amount is too low:", share_per_winner)
             return None
             
         blockhash_resp = solana_client.get_latest_blockhash()
         recent_blockhash = blockhash_resp.value.blockhash
         
-        transfer_ix = transfer(
-            TransferParams(
-                from_pubkey=owner_keypair.pubkey(),
-                to_pubkey=winner_pubkey,
-                lamports=transfer_lamports
+        tx_signatures = []
+        for winner_wallet_str in winners:
+            winner_pubkey = Pubkey.from_string(winner_wallet_str)
+            transfer_ix = transfer(
+                TransferParams(
+                    from_pubkey=owner_keypair.pubkey(),
+                    to_pubkey=winner_pubkey,
+                    lamports=share_per_winner
+                )
             )
-        )
+            
+            txn = Transaction.new_signed_with_payer(
+                instructions=[transfer_ix],
+                payer=owner_keypair.pubkey(),
+                signing_keypairs=[owner_keypair],
+                recent_blockhash=recent_blockhash
+            )
+            
+            res = solana_client.send_transaction(txn)
+            tx_sig = str(res.value) if hasattr(res, 'value') else str(res)
+            tx_signatures.append(f"https://solscan.io/tx/{tx_sig}")
+            print(f"SUCCESSFUL TRANSFER to {winner_wallet_str} - TX Signature:", tx_sig)
         
-        txn = Transaction.new_signed_with_payer(
-            instructions=[transfer_ix],
-            payer=owner_keypair.pubkey(),
-            signing_keypairs=[owner_keypair],
-            recent_blockhash=recent_blockhash
-        )
-        
-        res = solana_client.send_transaction(txn)
-        tx_sig = str(res.value) if hasattr(res, 'value') else str(res)
-        print("SUCCESSFUL TRANSFER - TX Signature:", tx_sig)
-        
-        return f"https://solscan.io/tx/{tx_sig}"
+        return ", ".join(tx_signatures)
     except Exception as e:
         import traceback
         print("DETAILED SOL TRANSFER ERROR:")
@@ -196,30 +212,28 @@ def run_automatic_draw():
         matches = len(set(user_nums).intersection(set(winning_numbers)))
         if matches >= threshold:
             matched_threshold_count += 1
-            # Çekiliş anında token hala bu cüzdanda duruyor mu kontrol edilir (Manipülasyon önlemi)
             has_token, _ = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
             if has_token:
                 winners.append(p["wallet"])
-                if len(winners) >= draw_state["max_winners"]:
-                    break
             else:
                 print(f"Disqualified: Tokens were transferred out of {p['wallet']} wallet!")
 
+    tx_url = None
+    payout_status = "no_winner"
+    
     if len(winners) > 0:
-        tx_url = execute_real_solana_sol_transfer(winners[0], draw_state.get("reward_percentage", 10.0))
+        tx_url = execute_real_solana_sol_transfers_to_winners(winners, draw_state.get("reward_percentage", 10.0))
         if tx_url:
-            draw_state["result_info"] = "Winner announced, SOL reward sent!"
+            draw_state["result_info"] = f"Draw completed! {len(winners)} winner(s) shared the reward pool and SOL was sent!"
             payout_status = "winner"
         else:
             winners = []
-            tx_url = None
-            draw_state["result_info"] = "Winner determined but SOL transfer failed (Check balance/RPC)."
+            draw_state["result_info"] = "Winners determined but SOL transfer failed (Check balance/fee/RPC)."
             payout_status = "no_winner"
     else:
-        tx_url = None
         req_bal_formatted = f"{draw_state['required_balance']:,}".replace(",", ".")
         if matched_threshold_count > 0:
-            draw_state["result_info"] = f"There were tickets with correct numbers, but the wallet did not have the required {req_bal_formatted} tokens condition at draw time."
+            draw_state["result_info"] = f"There were tickets with correct numbers, but the wallets did not have the required {req_bal_formatted} tokens condition at draw time."
         else:
             draw_state["result_info"] = "No tickets guessed the correct numbers."
         payout_status = "no_winner"
@@ -309,6 +323,13 @@ def update_settings(draw_id: int, settings: SettingsUpdate, x_admin_token: Optio
     if not x_admin_token or x_admin_token not in active_admin_tokens:
         raise HTTPException(status_code=401, detail="Unauthorized access or session expired!")
     
+    # Pick count (seçilecek numara adedi) için max 10 sınırı kontrolü
+    if settings.pick_count < 1 or settings.pick_count > 10:
+        raise HTTPException(status_code=400, detail="Pick count must be between 1 and 10.")
+        
+    if settings.match_threshold < 1 or settings.match_threshold > settings.pick_count:
+        raise HTTPException(status_code=400, detail="Match threshold cannot be greater than pick count.")
+
     if draw_state["draw_id"] != draw_id:
         draw_state["draw_id"] = draw_id
 
@@ -368,20 +389,17 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
         print("Ticket Signature Verify Error:", e)
         raise HTTPException(status_code=400, detail="Wallet signature for the ticket could not be verified!")
 
-    # 1. ZORUNLU NUMARA GİRİŞİ KONTROLÜ
     if not ticket.numbers or len(ticket.numbers) != draw_state["pick_count"]:
-        raise HTTPException(status_code=400, detail=f"You must select exactly {draw_state['pick_count']} numbers (Manual or Random Fill is mandatory).")
+        raise HTTPException(status_code=400, detail=f"You must select exactly {draw_state['pick_count']} numbers.")
     
     for n in ticket.numbers:
         if not (1 <= n <= draw_state["max_number"]):
             raise HTTPException(status_code=400, detail="Numbers must be between 1 and 50.")
 
-    # 2. ÇEKİLİŞ BAŞINA TEK KATILIM KONTROLÜ (Aynı cüzdan tekrar katılamaz, numaralarını değiştiremez)
     existing = next((p for p in draw_state["participants"] if p["wallet"] == ticket.wallet), None)
     if existing:
         raise HTTPException(status_code=400, detail="This wallet has already participated in this draw.")
 
-    # 3. TOKEN BAKİYE KONTROLÜ (Katılım Anı)
     has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
