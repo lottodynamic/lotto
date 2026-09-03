@@ -162,14 +162,17 @@ def execute_real_solana_sol_transfers_to_winners(winners: List[str], reward_perc
         
     try:
         owner_keypair = Keypair.from_base58_string(OWNER_SECRET_KEY_BASE58)
+        print(f"Owner Wallet Pubkey: {owner_keypair.pubkey()}")
+        
         owner_balance_resp = solana_client.get_balance(owner_keypair.pubkey())
         owner_lamports = owner_balance_resp.value
+        print(f"Owner SOL Balance (Lamports): {owner_lamports}")
         
         total_reward_lamports = int(owner_lamports * (reward_percentage / 100.0))
         
         fee_buffer = 15000 * len(winners)
         if owner_lamports <= fee_buffer + 1000:
-            print("Owner balance is too low to cover transfers and network fees.")
+            print("ERROR: Owner balance is too low to cover transfers and network fees.")
             return None
             
         max_available = owner_lamports - fee_buffer
@@ -177,44 +180,57 @@ def execute_real_solana_sol_transfers_to_winners(winners: List[str], reward_perc
             total_reward_lamports = max_available
             
         if total_reward_lamports <= 0:
-            print("Total reward lamports calculated is 0 or negative.")
+            print("ERROR: Total reward lamports calculated is 0 or negative.")
             return None
             
         share_per_winner = total_reward_lamports // len(winners)
         if share_per_winner < 1000:
-            print("Share per winner amount is too low:", share_per_winner)
+            print("ERROR: Share per winner amount is too low:", share_per_winner)
             return None
             
+        print("Fetching latest blockhash for transfer...")
         blockhash_resp = solana_client.get_latest_blockhash()
         recent_blockhash = blockhash_resp.value.blockhash
+        print(f"Blockhash retrieved: {recent_blockhash}")
         
         tx_signatures = []
         for winner_wallet_str in winners:
-            winner_pubkey = Pubkey.from_string(winner_wallet_str)
-            transfer_ix = transfer(
-                TransferParams(
-                    from_pubkey=owner_keypair.pubkey(),
-                    to_pubkey=winner_pubkey,
-                    lamports=share_per_winner
+            try:
+                winner_pubkey = Pubkey.from_string(winner_wallet_str)
+                transfer_ix = transfer(
+                    TransferParams(
+                        from_pubkey=owner_keypair.pubkey(),
+                        to_pubkey=winner_pubkey,
+                        lamports=share_per_winner
+                    )
                 )
-            )
-            
-            txn = Transaction.new_signed_with_payer(
-                instructions=[transfer_ix],
-                payer=owner_keypair.pubkey(),
-                signing_keypairs=[owner_keypair],
-                recent_blockhash=recent_blockhash
-            )
-            
-            res = solana_client.send_transaction(txn)
-            tx_sig = str(res.value) if hasattr(res, 'value') else str(res)
-            tx_signatures.append(f"https://solscan.io/tx/{tx_sig}")
-            print(f"SUCCESSFUL TRANSFER to {winner_wallet_str} - TX Signature:", tx_sig)
+                
+                txn = Transaction.new_signed_with_payer(
+                    instructions=[transfer_ix],
+                    payer=owner_keypair.pubkey(),
+                    signing_keypairs=[owner_keypair],
+                    recent_blockhash=recent_blockhash
+                )
+                
+                print(f"Sending transaction to winner: {winner_wallet_str} (Amount: {share_per_winner} lamports)")
+                res = solana_client.send_transaction(txn)
+                print(f"Send transaction response object: {res}")
+                
+                tx_sig = str(res.value) if hasattr(res, 'value') else str(res)
+                tx_signatures.append(f"https://solscan.io/tx/{tx_sig}")
+                print(f"SUCCESSFUL TRANSFER to {winner_wallet_str} - TX Signature:", tx_sig)
+            except Exception as inner_ex:
+                print(f"ERROR executing transfer for specific winner {winner_wallet_str}: {inner_ex}")
+                import traceback
+                traceback.print_exc()
         
+        if not tx_signatures:
+            return None
+            
         return ", ".join(tx_signatures)
     except Exception as e:
         import traceback
-        print("DETAILED SOL TRANSFER ERROR:")
+        print("DETAILED SOL TRANSFER MAIN EXCEPTION:")
         traceback.print_exc()
         return None
 
@@ -245,7 +261,7 @@ def run_automatic_draw():
             has_token, err_msg = check_wallet_token_balance(p["wallet"], draw_state["required_balance"])
             if has_token:
                 winners.append(p["wallet"])
-                print(f"-> WINNER ADDED: {p['wallet']}")
+                print(f"-> WINNER ADDED TO LIST: {p['wallet']}")
             else:
                 print(f"-> DISQUALIFIED: Matched numbers but failed token requirement! ({err_msg})")
 
@@ -253,14 +269,15 @@ def run_automatic_draw():
     payout_status = "no_winner"
     
     if len(winners) > 0:
+        print(f"Total winners qualified: {len(winners)}. Initiating SOL reward transfer...")
         tx_url = execute_real_solana_sol_transfers_to_winners(winners, draw_state.get("reward_percentage", 10.0))
         if tx_url:
             draw_state["result_info"] = f"Draw completed! {len(winners)} winner(s) shared the reward pool and SOL was sent!"
             payout_status = "winner"
         else:
-            winners = []
-            draw_state["result_info"] = "Winners determined but SOL transfer failed (Check balance/fee/RPC)."
-            payout_status = "no_winner"
+            # DÜZELTME: Kazananları silmiyoruz! Transferin hata yaptığını logluyoruz ama kazanan listesini koruyoruz.
+            draw_state["result_info"] = f"Winners successfully found ({len(winners)}), but SOL transfer failed or returned no signature. Check terminal logs!"
+            payout_status = "transfer_error"
     else:
         req_bal_formatted = f"{draw_state['required_balance']:,}".replace(",", ".")
         if matched_threshold_count > 0:
@@ -280,7 +297,7 @@ def run_automatic_draw():
         "tx_url": tx_url
     }
     draw_state["past_payouts"].insert(0, payout)
-    print(f"--- DRAW #{draw_state['draw_id']} FINISHED. Winners: {winners} ---\n")
+    print(f"--- DRAW #{draw_state['draw_id']} FINISHED. Winners: {winners} | TX URL: {tx_url} ---\n")
 
 @app.get("/current-rules")
 def get_current_rules():
@@ -431,7 +448,7 @@ def submit_ticket(ticket: TicketSubmit, request: Request):
     if existing:
         raise HTTPException(status_code=400, detail="This wallet has already participated in this draw.")
 
-    has_token, err_msg = check_wallet_token_balance(ticket.wallet, draw_state["required_balance"])
+    has_token, err_msg = check_wallet_token_balance(token_wallet:=ticket.wallet, draw_state["required_balance"])
     if not has_token:
         raise HTTPException(status_code=400, detail=err_msg)
 
